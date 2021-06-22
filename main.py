@@ -1,8 +1,15 @@
 from flask import Flask, request, jsonify
+from predictor import Predictor
 
 app = Flask(__name__)
 
+predictor = Predictor()
+
 
 @app.route('/caption', methods=['POST'])
-def captionize():
-    return jsonify({'result': 1})
+def caption():
+    return jsonify({'result': predictor.predict()})
+
+
+
+
