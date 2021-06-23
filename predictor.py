@@ -1,9 +1,7 @@
 import torch
-
 from transformers import BertTokenizer
 from PIL import Image
 import argparse
-
 from transformer.models import caption
 from transformer.datasets import coco, utils
 from transformer.configuration import Config
@@ -14,9 +12,16 @@ import numpy as np
 import argparse
 import pickle
 from torchvision import transforms
-from RNN.build_vocab import Vocabulary
+# from RNN.build_vocab import Vocabulary
 from RNN.model import EncoderCNN, DecoderRNN
 from PIL import Image
+
+
+class MyCustomUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        if module == "__main__":
+            module = "RNN.build_vocab"
+        return super().find_class(module, name)
 
 
 class Predictor:
@@ -32,7 +37,10 @@ class Predictor:
                                  (0.229, 0.224, 0.225))])
 
         with open('RNN/data/vocab.pkl', 'rb') as f:
-            self.vocab = pickle.load(f)
+            unpickler = MyCustomUnpickler(f)
+            self.vocab = unpickler.load()
+
+        # print(type(self.vocab))
 
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -100,12 +108,9 @@ class Predictor:
             # Print out the image and the generated caption
             return sentence
 
-
-
-print(Predictor().predict(arch="rnn"))
+# print(Predictor().predict(arch="rnn"))
 
 # Device configuration
-
 
 
 # def load_image(image_path, transform=None):
