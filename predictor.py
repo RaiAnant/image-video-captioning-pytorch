@@ -12,7 +12,6 @@ import numpy as np
 import argparse
 import pickle
 from torchvision import transforms
-# from RNN.build_vocab import Vocabulary
 from RNN.model import EncoderCNN, DecoderRNN
 from PIL import Image
 

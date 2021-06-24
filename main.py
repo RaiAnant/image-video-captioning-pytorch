@@ -2,7 +2,6 @@ from flask import Flask, request, jsonify
 from predictor import Predictor
 from threading import Thread
 import datetime
-from RNN.build_vocab import Vocabulary
 import os
 
 app = Flask(__name__)
