@@ -6,6 +6,7 @@ import os
 import cv2
 import subprocess
 import random
+import pickle
 
 app = Flask(__name__)
 epoch = datetime.datetime.utcfromtimestamp(0)
@@ -40,7 +41,7 @@ def save_i_keyframes(video_fn):
             ret, frame = cap.read()
             frmno = str(frame_no)
             n = len(str(i_frames[-1]))
-            outname = "/".join(video_fn.split("/")[:-1])+"/"+"0"*(n-len(frmno)) +frmno + '.jpg'
+            outname = "/".join(video_fn.split("/")[:-1]) + "/" + "0" * (n - len(frmno)) + frmno + '.jpg'
             print("saved: ")
             cv2.imwrite(outname, frame)
             print('Saved: ' + outname)
@@ -63,10 +64,17 @@ class Worker:
             print("doing work")
             dir = self.basepath + "/videos/" + str(self.jobs[0])
             save_i_keyframes(dir + "/" + str(self.jobs[0]) + ".mp4")
+            captions = {}
             for filename in os.listdir(dir):
                 if filename.endswith(".jpg"):
+                    # print(filename)
+                    captions[int(filename[:-4])] = predictor.predict(pth=dir + "/" + filename)
+                    os.remove(dir + "/" + filename)
 
-            # print(self.jobs[0], ":", predictor.predict())
+            os.remove(dir + "/" + str(self.jobs[0]) + ".mp4")
+            pickle_out = open(dir + "/" + "out.pickle", "wb")
+            pickle.dump(captions, pickle_out)
+            pickle_out.close()
             self.jobs = self.jobs[1:]
 
     def start(self):
@@ -81,17 +89,17 @@ worker = Worker()
 predictor = Predictor()
 
 
-@app.route('/caption', methods=['POST'])
-def caption():
-    id = datetime.datetime.now().timestamp()
-    worker.add_job(id)
-    worker.start()
-    return jsonify({'id': id})
+# @app.route('/caption', methods=['POST'])
+# def caption():
+#     id = datetime.datetime.now().timestamp()
+#     worker.add_job(id)
+#     worker.start()
+#     return jsonify({'id': id})
 
 
 @app.route('/upload', methods=['POST'])
 def upload():
-    id = random.randint(0, 99999)+datetime.datetime.now().timestamp()
+    id = random.randint(0, 99999) + datetime.datetime.now().timestamp()
     f = request.files['file']
     # model = request.args.get('username')
     basepath = os.path.dirname(__file__)
@@ -102,3 +110,17 @@ def upload():
     worker.add_job(id)
     worker.start()
     return jsonify({'id': id})
+
+
+@app.route('/caption', methods=['GET', 'POST'])
+def caption():
+    id = request.args.get("id")
+    if os.path.isdir("./videos/" + id):
+        if os.path.isfile("./videos/" + id + "/out.pickle"):
+            pickle_in = open("./videos/" + id + "/out.pickle", "rb")
+            captions = pickle.load(pickle_in)
+            return jsonify({'status': "processing", 'caption': captions})
+        else:
+            return jsonify({'status': "processing", 'caption': {}})
+
+    return jsonify({'status': "null", 'caption': {}})
